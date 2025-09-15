@@ -1,3 +1,6 @@
 /node_modules
 /logs/*
+!/logs/.gitkeep
+
 /data/db/*
+!/data/db/.gitkeep
