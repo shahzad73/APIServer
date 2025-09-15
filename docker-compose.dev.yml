@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  # Node.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: api-node-app
+    ports:
+      - "5321:5321"
+    volumes:
+      - .:/app                 # Mount host code to container
+      - ./logs:/app/logs       # map host ./logs → container /app/logs
+      - /app/node_modules      # Keep node_modules in container
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${POSTGRES_PORT}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+    depends_on:
+      - db
+    restart: no
+    networks:
+      - app-network
+    env_file:
+      - .env
+
+
+  # Database (PostgreSQL example)
+  db:
+    image: postgres:15-alpine
+    container_name: pg-db-app    
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - ./data/db:/var/lib/postgresql/data  # Persist database data
+      - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql  # Initial SQL
+    networks:
+      - app-network
+    restart: no
+
+networks:
+  app-network:
+    driver: bridge
+
+
+
+#  - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql  # Initial SQL
+# This line mounts an initialization SQL script from your host machine into the PostgreSQL container.
+# When the PostgreSQL container is started for the first time, it will automatically execute any
+# scripts found in the /docker-entrypoint-initdb.d/ directory. This is useful for setting up your
+# database schema, creating tables, or inserting initial data.
+# ./data/db:/var/lib/postgresql/data  # Persist database data
+# This line mounts a directory from your host machine (./data/db) to the PostgreSQL container's
+# data directory (/var/lib/postgresql/data). This ensures that your database data is persisted on
+
+
+# .:/app → mounts your host machine project folder into /app in the container, 
+#  replacing whatever was copied during docker build.
+
+# /app/node_modules → creates an anonymous volume for node_modules, so the container’s 
+# installed dependencies persist inside Docker and don’t get overwritten by your host’s empty 
+# node_modules.
+
+# depends_on → ensures the db service starts before the app service, but it doesn’t wait for
+# the database to be ready to accept connections. You might want to add a wait-for-it script
+# or similar to handle that in your app startup logic.
+# restart: no → prevents automatic restarts of the containers, which is useful during development
+# to avoid unexpected behavior when you make changes.
+# env_file → loads environment variables from a .env file, keeping sensitive information out of the compose file.
+# networks → creates a custom bridge network for better isolation and communication between services.
+# volumes → mounts host directories to persist data and share files between the host and container.
+# ports → maps container ports to host ports for accessing services from your host machine.
+# environment → sets environment variables for configuration, often sourced from a .env file.
+# build → specifies the build context for the app service, allowing you to use a Dockerfile in the current directory.
+# image → specifies the Docker image to use for the db service, in this case, a lightweight PostgreSQL image.
+# depends_on → ensures the db service starts before the app service, but it doesn’t wait for
+# the database to be ready to accept connections. You might want to add a wait-for-it script
+# or similar to handle that in your app startup logic.
+# restart: no → prevents automatic restarts of the containers, which is useful during development
+# to avoid unexpected behavior when you make changes.
+# env_file → loads environment variables from a .env file, keeping sensitive information out of the compose file.
+# networks → creates a custom bridge network for better isolation and communication between services.
+# volumes → mounts host directories to persist data and share files between the host and container.
+# ports → maps container ports to host ports for accessing services from your host machine.
+# environment → sets environment variables for configuration, often sourced from a .env file.
+# build → specifies the build context for the app service, allowing you to use a Dockerfile in the current directory.
+# image → specifies the Docker image to use for the db service, in this case, a lightweight PostgreSQL image.
+# db service uses a volume to persist database data and an initialization script to set up the database schema on first run.
+
+
+
+
+
+
+# 🔹 1. How Postgres initializes in Docker
+
+# When you run your db service with:
+
+# db:
+#   image: postgres:15-alpine
+#   environment:
+#     - POSTGRES_DB=${POSTGRES_DB}
+#     - POSTGRES_USER=${POSTGRES_USER}
+#     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#   volumes:
+#     - ./data/db:/var/lib/postgresql/data
+#     - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+# What happens:
+
+# First time only (when ./data/db is empty):
+
+# The container checks if /var/lib/postgresql/data already has a database.
+
+# Empty → it initializes a new cluster.
+
+# Non-empty → it skips initialization.
+
+# It creates:
+
+# The database defined in POSTGRES_DB
+
+# The user defined in POSTGRES_USER with password POSTGRES_PASSWORD
+
+# It runs any *.sql or *.sh files inside /docker-entrypoint-initdb.d/ (in your case, ./data/init.sql).
+
+# This is where you can create tables, insert seed data, etc.
+
+# Subsequent runs (when ./data/db already has data):
+# → Postgres starts up using existing data, ignoring environment variables and init.sql.
+
+# That’s why if you change POSTGRES_USER or POSTGRES_PASSWORD later, it won’t take effect unless you delete or reset the data folder.
+
+# 🔹 2. Does it create DB user & password?
+
+#  Yes, on the very first run (when no existing database cluster exists in ./data/db).
+#  No, on later runs (because Postgres already has its data directory, so it skips re-initialization).

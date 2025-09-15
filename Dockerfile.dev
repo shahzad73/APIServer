@@ -1,0 +1,36 @@
+# Development Container (hot reload, no manual build step)
+# Nodemon watches your .ts files.
+# ts-node runs them directly.
+# No need for a separate npm run build.
+
+
+# Use the desired Node.js version
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install required Alpine packages (for SSL + building native modules if needed later)
+RUN apk add --no-cache ca-certificates python3 make g++
+
+# Set npm registry
+RUN npm config set registry https://registry.npmjs.org/
+
+# Copy package files first for better caching
+COPY package*.json ./
+
+# Install dependencies (include ts-node & nodemon for dev)
+RUN npm install
+RUN npm install --save-dev typescript ts-node @types/node
+
+# Copy application code
+COPY . .
+
+# Expose the port your app runs on
+EXPOSE 3000
+
+# Install nodemon globally (optional, you could use local version instead)
+RUN npm install -g nodemon
+
+# Start the application with ts-node + nodemon
+CMD ["nodemon", "--legacy-watch", "--exec", "ts-node", "src/app.ts"]

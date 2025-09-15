@@ -1,0 +1,29 @@
+# Dev dependencies (ts-node, typescript, etc.) never go into your final image.
+# The final image is smaller and faster.
+
+# Stage 1: Build
+FROM node:18-alpine AS build
+
+WORKDIR /app
+
+RUN apk add --no-cache ca-certificates python3 make g++
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+RUN npm run build
+
+# Stage 2: Runtime
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy only built files + prod dependencies
+COPY --from=build /app/dist ./dist
+COPY package*.json ./
+RUN npm install --omit=dev
+
+EXPOSE 3000
+
+CMD ["node", "dist/app.js"]
