@@ -2,6 +2,25 @@ version: '3.8'
 
 services:
   # Node.js Application
+
+
+  # Database (PostgreSQL example)
+  db:
+    image: postgres:15-alpine
+    container_name: pg-db-app    
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - ./data/db-test:/var/lib/postgresql/data     # Persist database data
+      - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql  # Initial SQL
+    networks:
+      - app-network
+    restart: no
+
   app:
     build:
       context: .
@@ -16,35 +35,18 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV}
       - DB_HOST=${DB_HOST}
-      - DB_PORT=${POSTGRES_PORT}
-      - DB_USER=${POSTGRES_USER}
-      - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - DB_NAME=${POSTGRES_DB}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     depends_on:
       - db
     restart: no
+    command: ["./wait-for-db-up.sh", "db", "--", "nodemon", "--legacy-watch", "--exec", "ts-node", "src/app.ts"]
     networks:
       - app-network
     env_file:
       - .env
-
-
-  # Database (PostgreSQL example)
-  db:
-    image: postgres:15-alpine
-    container_name: pg-db-app    
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    ports:
-      - "${POSTGRES_PORT}:5432"
-    volumes:
-      - ./data/db:/var/lib/postgresql/data  # Persist database data
-      - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql  # Initial SQL
-    networks:
-      - app-network
-    restart: no
 
 networks:
   app-network:

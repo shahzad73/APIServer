@@ -33,4 +33,4 @@ EXPOSE 3000
 RUN npm install -g nodemon
 
 # Start the application with ts-node + nodemon
-CMD ["nodemon", "--legacy-watch", "--exec", "ts-node", "src/app.ts"]
+# CMD ["nodemon", "--legacy-watch", "--exec", "ts-node", "src/app.ts"]

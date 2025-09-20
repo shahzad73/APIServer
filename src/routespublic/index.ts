@@ -12,5 +12,8 @@ router.get("/", (req: Request, res: Response) => {
 import manageRouter from "./manage";
 router.use("/", manageRouter);
 
+import plaidRouter from "./plaid";
+router.use("/plaid", plaidRouter);
+
 
 export default router;
